@@ -1,1 +1,89 @@
 
+import pandas as pd
+import numpy as np
+# Baca dataset https://storage.googleapis.com/dqlab-dataset/retail_raw_reduced.csv
+url = 'https://drive.usercontent.google.com/download?id=1CHv55yVL8HtpiMx2mVSyZ8TWWO2tdO_y&export=download&authuser=0&confirm=t&uuid=545d8cf2-c67a-422b-b906-8a80df1c2bef&at=AN8xHooIzTELtUP7lG6vyhRCow02:1753531400294'
+
+dataset = pd.read_csv(url)
+
+#jika ingin mengecek kolom yang ada dalam "data_set"
+data_coloumns = dataset.columns
+
+#menugurutkan data dari name
+dataset.sort_values(by='name', ascending=True, inplace=True) 
+
+# kolom yang tersedia ['donor_id', 'age_group', 'gender', 'name', 'email', 'country','donation_type', 'donation_amount', 'donation_date', 'payment_method','newsletter_opt_in', 'referral_channel', 'sector', 'campaign']"
+
+print(dataset.head(10))
+
+data_kosong = dataset.isnull().sum() #cara mengecek apakah ada data yang kosong pada kolom. dalam data ini semua kolom terisi jika tidak gunakan filnaa untuk mengisi kolom yang kosong dataset['nama_kolom'] = dataset['nama_kolom'].fillna('isi_default')
+
+#buat fungsi pengelompokan umur dari dataset karena "age_grup" hanya menampilan rentan usia semialakan "50-56" maka kita buat kedalam mean agar mudah di kelompokan misalkan 'tua"
+
+def data_usia(x):
+    #melakukan cek data x jika value berupa str yang dipisahkan oleh "-" 
+    if isinstance(x, str) and "-" in x:  #jika memenuhi maka akan diturunkan ke dalm fungsi if
+        data = x.split("-") # data kemudian di pisah menghasikan list data = [x, x]
+        Usia = (int(data[0])+ int(data[1])) / 2 # mengambil data list baris ke 1 dan 2 untuk dijadikan rata-rata
+        return Usia #input hasil
+    else:
+        try:
+            return float(x)
+        except:
+            return np.nan  # jika tidak dapat di konversi
+
+#membuat fungsi pengelompokan data_usia
+
+def data_ranga(x):
+    usia = data_usia(x) #mengambil fungsi dari data_usia(x)
+    if usia <= 21:
+        return 'remaja'
+    if usia <= 32:
+        return "dewasa_muda"
+    if usia <= 52:
+        return "dewasa"
+    return "tua" #jika value tidak terdapat fungsi if
+
+#membuat_data_set baru range_usia
+dataset['jarak_usia'] = dataset['age_group'].apply(lambda x: data_ranga(x))
+
+#mengubah data unkown 'other' menjadi 'unknown'
+def data_gender(x):
+    x = str(x).lower() #agar bisa membaca huruf besar dan kecil
+    if x == 'male': #mengubah_nilai male menjadi pria
+        return 'pria'
+    if x == 'female': #mengubah_nilai female menjadi wanita
+        return 'Wanita'
+    else:
+        return 'Tidak diketahui' #selain pria, wanita akan menjadi 'tidak diketahui'
+    
+
+    
+dataset['gender'] = dataset['gender'].apply(lambda x : data_gender(x)) #memasukan fungsi data_gender dan merubahn value yang ada sesuai fungsi
+
+
+#merubah donation_amount euro menjadi rupiah
+
+def konversi_rupiah(x):
+    try: 
+        x = float(x)
+        return int(x) * 19000
+    except ValueError:
+        return np.nan
+    
+dataset['jumlah_donasi'] = dataset['donation_amount'].apply(lambda x: konversi_rupiah(x))
+duplikat = dataset['donor_id'].duplicated().sum() # cek apakah donor_id ini sebagai identitas nama atau dari jumlah donasi untuk menghitung total berapa kali orang berdonasi 
+print(f"Jumlah duplikat: {duplikat}")
+
+#mensortir data dibutuh yang akan di jumlahkan pada kolom jumlah donasi dengan group by
+dataset_pendonor = dataset.groupby(['name','country','gender','jarak_usia'])['jumlah_donasi'].agg(jumlah_transaksi = 'count', total_donasi ='sum').reset_index()
+
+# ['name','country','gender','jarak_usia'] alasan mengunakan kolom ini di karenakan setiap baris identik dengan kolom lainya
+
+dataset_pendonor.rename(columns={ 'name': 'nama',
+                                 'country': 'negara',
+                                 'gender':'jenis_kelamin'
+}, inplace=True
+)
+
+print(dataset_pendonor)
